@@ -194,7 +194,7 @@ pipeline {
                     if (targets.contains('prod')) {
                         timeout(time: 1, unit: 'HOURS') {
                             input(message: 'Supprimer l\'environnement de PRODUCTION (application, namespace, volume) ?',
-                                  ok: 'Supprimer la production', submitter: 'prod-approvers')   // [À confirmer]
+                                  ok: 'Supprimer la production', submitter: 'admin')   // 
                         }
                     }
                     for (e in targets) {
@@ -321,7 +321,7 @@ pipeline {
                                 id: 'ValidationProduction',
                                 message: "Déployer ${env.BACKEND_TAG} et ${env.FRONTEND_TAG} en PRODUCTION ?",
                                 ok: 'Valider ma décision',
-                                submitter: 'prod-approvers',      
+                                submitter: 'admin',      
                                 parameters: [
                                     choice(name: 'DECISION',
                                            choices: ['Ne pas déployer en production', 'Déployer en production'],
