@@ -88,13 +88,13 @@ def promote(String envName) {
                         -p "{\\"operation\\":{\\"initiatedBy\\":{\\"username\\":\\"jenkins\\"},\\"sync\\":{\\"revision\\":\\"$SHA\\"}}}" || true
                 fi
 
-                for i in $(seq 1 60); do
+                for i in $(seq 1 120); do
                     REV=$($A get application "$APP_NAME" -o jsonpath='{.status.sync.revision}' 2>/dev/null || true)
                     SYNC=$($A get application "$APP_NAME" -o jsonpath='{.status.sync.status}' 2>/dev/null || true)
                     HEALTH=$($A get application "$APP_NAME" -o jsonpath='{.status.health.status}' 2>/dev/null || true)
                     PHASE=$($A get application "$APP_NAME" -o jsonpath='{.status.operationState.phase}' 2>/dev/null || true)
                     OPREV=$($A get application "$APP_NAME" -o jsonpath='{.status.operationState.syncResult.revision}' 2>/dev/null || true)
-                    echo "[$i/60] $APP_NAME révision=$(printf '%.8s' "$REV") sync=$SYNC santé=$HEALTH opération=$PHASE"
+                    echo "[$i/120] $APP_NAME révision=$(printf '%.8s' "$REV") sync=$SYNC santé=$HEALTH opération=$PHASE"
                     
                     if [ "$REV" = "$SHA" ] && [ "$SYNC" = "Synced" ] && [ "$HEALTH" = "Healthy" ] && [ "$PHASE" = "Succeeded" ]; then
                         kubectl -n "$ENV_NAME" get pods,ingress
@@ -107,7 +107,7 @@ def promote(String envName) {
                     fi
                     sleep 10
                 done
-                echo "Délai dépassé : $APP_NAME n'est pas Healthy après 10 minutes." >&2
+                echo "Délai dépassé : $APP_NAME n'est pas Healthy après 20 minutes." >&2
                 exit 1
             '''
         }
