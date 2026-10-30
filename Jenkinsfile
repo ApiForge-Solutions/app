@@ -1,18 +1,3 @@
-// =============================================================================
-//  Code test -> Build -> Test des images -> Push Docker Hub
-//     -> dev -> staging -> qa -> [VALIDATION HUMAINE] -> prod
-//
-// Jenkins ne déploie PAS avec Helm. Pour chaque environnement il :
-//   1. write new image tags in the manifests repo (values-<env>.yaml),
-//   2. create namespace and secret (db credentials, secret key, superuser password) if they don't exist,
-//   3. request ArgoCD to sync and wait for the application to be "Healthy".
-//      Git is the source of truth : ArgoCD read from it.
-//
-// Clean
-//   - ACTION = clean-only + CLEAN_ENVS : delete Environment (Application ArgoCD, namespace, volume)
-//     for chosen environments. Data remains on the node disk (hostPath) : nothing is deleted in the filesystem.
-// =============================================================================
-
 // Delete previous containers and networks created by this build (labelled with BUILD_TAG).
 def ciClean() {
     sh '''
@@ -235,7 +220,7 @@ pipeline {
 
         stage('Test des images') {
             when { expression { params.ACTION == 'pipeline' } }
-            parallel {
+            stages {
                 stage('Image backend (pytest + base de données)') {
                     steps {
                         script {
