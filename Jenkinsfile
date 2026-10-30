@@ -238,6 +238,7 @@ pipeline {
                                         -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=ci-only -e POSTGRES_DB=app \
                                         -e SECRET_KEY=ci-only-not-a-secret \
                                         -e FIRST_SUPERUSER=admin@example.com -e FIRST_SUPERUSER_PASSWORD=ci-only-password \
+                                        -e EMAILS_FROM_EMAIL=info@example.com \
                                         "$IMAGE_REPO:$BACKEND_TAG" bash -c "bash scripts/prestart.sh && bash scripts/tests-start.sh"
                                 '''
                             }
