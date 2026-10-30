@@ -94,8 +94,8 @@ def promote(String envName) {
                     HEALTH=$($A get application "$APP_NAME" -o jsonpath='{.status.health.status}' 2>/dev/null || true)
                     PHASE=$($A get application "$APP_NAME" -o jsonpath='{.status.operationState.phase}' 2>/dev/null || true)
                     OPREV=$($A get application "$APP_NAME" -o jsonpath='{.status.operationState.syncResult.revision}' 2>/dev/null || true)
-                    echo "[$i/60] $APP_NAME révision=${REV:0:8} sync=$SYNC santé=$HEALTH opération=$PHASE"
-
+                    echo "[$i/60] $APP_NAME révision=$(printf '%.8s' "$REV") sync=$SYNC santé=$HEALTH opération=$PHASE"
+                    
                     if [ "$REV" = "$SHA" ] && [ "$SYNC" = "Synced" ] && [ "$HEALTH" = "Healthy" ] && [ "$PHASE" = "Succeeded" ]; then
                         kubectl -n "$ENV_NAME" get pods,ingress
                         exit 0
