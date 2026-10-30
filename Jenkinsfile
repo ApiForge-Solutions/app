@@ -12,9 +12,8 @@ def ciNet(String suffix) {
 
 // Write new image tags in the manifests repo, create namespace and secret (if needed), request ArgoCD to sync and wait for the application to be "Healthy".
 def promote(String envName) {
-    withEnv(["ENV_NAME=${envName}", "APP_NAME=fastapi-${envName}"]) {
+    withEnv(["ENV_NAME=${envName}", "APP_NAME=fastapi-${envName}", "KUBECONFIG=${env.JENKINS_HOME}/.kube/fastapi-config"]) {
         withCredentials([
-            file(credentialsId: 'kubeconfig-cluster', variable: 'KUBECONFIG'),
             usernamePassword(credentialsId: 'github-manifests', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN'),
             string(credentialsId: "postgres-user-${envName}", variable: 'POSTGRES_USER'),
             string(credentialsId: "postgres-password-${envName}", variable: 'POSTGRES_PASSWORD'),
@@ -24,6 +23,7 @@ def promote(String envName) {
             sh '''
                 set -eu
                 set +x
+                test -s "$KUBECONFIG" || { echo "ERREUR : kubeconfig absent ($KUBECONFIG). Lancer d'abord le pipeline d'infrastructure." >&2; exit 1; }
                 kubectl get nodes > /dev/null          # échouer AVANT toute modification si le cluster est injoignable
 
                 rm -rf "manifests-$ENV_NAME"
@@ -116,16 +116,15 @@ def promote(String envName) {
 
 // Delete ArgoCD Application, namespace and volume for the given environment. Data remains on the node disk (hostPath) : nothing is deleted in the filesystem.
 def cleanEnv(String envName) {
-    withEnv(["ENV_NAME=${envName}"]) {
-        withCredentials([file(credentialsId: 'kubeconfig-cluster', variable: 'KUBECONFIG')]) {
-            sh '''
-                set -eu
-                echo "Nettoyage de l'environnement $ENV_NAME"
-                kubectl -n argocd delete application "fastapi-$ENV_NAME" --ignore-not-found --wait=true --timeout=5m
-                kubectl delete namespace "$ENV_NAME" --ignore-not-found --wait=true --timeout=5m
-                kubectl delete pv "db-pv-$ENV_NAME" --ignore-not-found
-            '''
-        }
+    withEnv(["ENV_NAME=${envName}", "KUBECONFIG=${env.JENKINS_HOME}/.kube/fastapi-config"]) {
+        sh '''
+            set -eu
+            test -s "$KUBECONFIG" || { echo "ERREUR : kubeconfig absent ($KUBECONFIG)." >&2; exit 1; }
+            echo "Nettoyage de l'environnement $ENV_NAME"
+            kubectl -n argocd delete application "fastapi-$ENV_NAME" --ignore-not-found --wait=true --timeout=5m
+            kubectl delete namespace "$ENV_NAME" --ignore-not-found --wait=true --timeout=5m
+            kubectl delete pv "db-pv-$ENV_NAME" --ignore-not-found
+        '''
     }
 }
 
