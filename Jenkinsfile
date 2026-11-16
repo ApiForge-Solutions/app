@@ -18,7 +18,9 @@ def promote(String envName) {
             string(credentialsId: "postgres-user-${envName}", variable: 'POSTGRES_USER'),
             string(credentialsId: "postgres-password-${envName}", variable: 'POSTGRES_PASSWORD'),
             string(credentialsId: "first-superuser-password-${envName}", variable: 'FIRST_SUPERUSER_PASSWORD'),
-            string(credentialsId: "fastapi-secret-key-${envName}", variable: 'SECRET_KEY')
+            string(credentialsId: "fastapi-secret-key-${envName}", variable: 'SECRET_KEY'),
+            string(credentialsId: 'db-backup-s3-user', variable: 'DB_BACKUP_S3_USER'),
+            string(credentialsId: 'db-backup-s3-password', variable: 'DB_BACKUP_S3_PASSWORD')
         ]) {
             sh '''
                 set -eu
@@ -56,7 +58,8 @@ def promote(String envName) {
                 set +x
                 umask 077
                 ENVFILE=$(mktemp)
-                trap 'rm -f "$ENVFILE"' EXIT
+                BKFILE=$(mktemp)
+                trap 'rm -f "$ENVFILE" "$BKFILE"' EXIT
                 {
                     printf 'POSTGRES_USER=%s\n' "$POSTGRES_USER"
                     printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD"
@@ -65,9 +68,17 @@ def promote(String envName) {
                     printf 'FIRST_SUPERUSER_PASSWORD=%s\n' "$FIRST_SUPERUSER_PASSWORD"
                 } > "$ENVFILE"
 
+                {
+                    printf 'S3_ACCESS_KEY=%s\n' "$DB_BACKUP_S3_USER"
+                    printf 'S3_SECRET_KEY=%s\n' "$DB_BACKUP_S3_PASSWORD"
+                } > "$BKFILE"
+
                 kubectl create namespace "$ENV_NAME" --dry-run=client -o yaml | kubectl apply -f -
                 kubectl -n "$ENV_NAME" create secret generic db-secret \
                     --from-env-file="$ENVFILE" --dry-run=client -o yaml | kubectl apply -f -
+                # Identifiants MinIO du CronJob de sauvegarde de la base (voir chart/templates/db/db-backup-cronjob.yaml)
+                kubectl -n "$ENV_NAME" create secret generic db-backup-s3 \
+                    --from-env-file="$BKFILE" --dry-run=client -o yaml | kubectl apply -f -
 
                 # Idempotent : crée l'Application si elle n'existe pas (premier passage, ou après un nettoyage)
                 kubectl apply -f "manifests-$ENV_NAME/applications/$ENV_NAME.yaml"
